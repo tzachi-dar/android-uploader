@@ -26,6 +26,12 @@ import com.nightscout.android.dexcom.USB.USBPower;
 import com.nightscout.android.dexcom.USB.UsbSerialDriver;
 import com.nightscout.android.dexcom.USB.UsbSerialProber;
 import com.nightscout.android.upload.UploadHelper;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -49,6 +55,18 @@ public class DexcomG4Service extends Service {
     private SerialInputOutputManager mSerialIoManager;
     private WifiManager wifiManager;
 
+    private String topic        = "entries/sgv";
+    private int qos             = 2;
+    // need to fill these in
+    private String userName     = null;
+    private String password     = null;
+    private int port            = 1;
+    ////////////////////////////////////
+    private String broker       = "tcp://m10.cloudmqtt.com:" + port;
+    private String clientId     = "tester";
+    private MemoryPersistence persistence = new MemoryPersistence();
+    private MqttClient mqttClient;
+
     @Override
     public IBinder onBind(Intent arg0) {
         // TODO Auto-generated method stub
@@ -65,6 +83,8 @@ public class DexcomG4Service extends Service {
         // connectToG4();
         mHandler.removeCallbacks(readAndUpload);
         mHandler.post(readAndUpload);
+
+        connect2MQTT();
     }
 
     @Override
@@ -88,6 +108,8 @@ public class DexcomG4Service extends Service {
             }
             mSerialDevice = null;
         }
+
+        disconnectMQTT();
     }
 
     //get the data upload it
@@ -189,6 +211,14 @@ public class DexcomG4Service extends Service {
                 // just read most recent pages (consider only reading 1 page since only need latest value).
                 dexcomReader.readFromReceiver(getBaseContext(), 1);
                 uploader.execute(dexcomReader.mRD[dexcomReader.mRD.length - 1]);
+            }
+
+            // Setup JSON string and public message
+            if (mqttClient.isConnected()) {
+                publish2MQTT(dexcomReader.mRD[dexcomReader.mRD.length - 1]);
+            } else {
+                connect2MQTT();
+                publish2MQTT(dexcomReader.mRD[dexcomReader.mRD.length - 1]);
             }
 
             initialRead = false;
@@ -375,5 +405,46 @@ public class DexcomG4Service extends Service {
         }
 
         return  nextUploadTimer;
+    }
+
+    private void connect2MQTT() {
+        try {
+            mqttClient = new MqttClient(broker, clientId, persistence);
+            MqttConnectOptions connOpts = new MqttConnectOptions();
+            connOpts.setCleanSession(true);
+            connOpts.setPassword(password.toCharArray());
+            connOpts.setUserName(userName);
+            int keepAlive = 180;
+            connOpts.setKeepAliveInterval(keepAlive);
+            Log.i(TAG, "Connecting to broker: " + broker);
+            mqttClient.connect(connOpts);
+        } catch(MqttException me) {
+
+        }
+    }
+
+    private void disconnectMQTT() {
+        try {
+            mqttClient.disconnect();
+        } catch(MqttException me) {
+
+        }
+    }
+
+    private void publish2MQTT (EGVRecord record) {
+        try {
+            SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy hh:mm:ss aa");
+            Date date = DATE_FORMAT.parse(record.displayTime);
+            JSONObject json = new JSONObject();
+            json.put("device", "dexcom");
+            json.put("date", date.getTime());
+            json.put("sgv", record.bGValue);
+            json.put("direction", record.trend);
+            MqttMessage message = new MqttMessage(json.toString().getBytes());
+            message.setQos(qos);
+            mqttClient.publish(topic, message);
+        } catch (Exception e) {
+
+        }
     }
 }
