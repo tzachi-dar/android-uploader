@@ -1,10 +1,10 @@
 package com.nightscout.android;
 
 import android.app.Application;
-import android.util.Log;
+//import android.util.Log;
 
-import com.google.android.gms.analytics.GoogleAnalytics;
-import com.google.android.gms.analytics.Tracker;
+//import com.google.android.gms.analytics.GoogleAnalytics;
+//import com.google.android.gms.analytics.Tracker;
 
 import org.acra.ACRA;
 import org.acra.ReportingInteractionMode;
@@ -30,22 +30,23 @@ import org.acra.annotation.*;
 
 public class Nightscout extends Application {
     private final String TAG = MainActivity.class.getSimpleName();
-    private Tracker tracker = null;
+//    private Tracker tracker = null;
 
     @Override
     public void onCreate() {
         super.onCreate();
         ACRA.init(this);
+//        GoogleAnalytics.getInstance(this).setAppOptOut(true);
     }
 
-    synchronized public Tracker getTracker() {
-        Log.d(TAG, "getTracker called");
-        if (tracker == null) {
-            Log.d(TAG,"tracker was null - returning new tracker");
-            GoogleAnalytics analytics = GoogleAnalytics.getInstance(this);
-            tracker =  analytics.newTracker(R.xml.app_tracker);
-            return tracker;
-        }
-        return tracker;
-    }
+//    synchronized public Tracker getTracker() {
+//        Log.d(TAG, "getTracker called");
+//        if (tracker == null) {
+//            Log.d(TAG,"tracker was null - returning new tracker");
+//            GoogleAnalytics analytics = GoogleAnalytics.getInstance(this);
+//            tracker =  analytics.newTracker(R.xml.app_tracker);
+//            return tracker;
+//        }
+//        return tracker;
+//    }
 }

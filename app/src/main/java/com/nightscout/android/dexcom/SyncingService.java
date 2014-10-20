@@ -11,10 +11,10 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.google.android.gms.analytics.HitBuilders;
-import com.google.android.gms.analytics.Tracker;
+//import com.google.android.gms.analytics.HitBuilders;
+//import com.google.android.gms.analytics.Tracker;
 import com.nightscout.android.MainActivity;
-import com.nightscout.android.Nightscout;
+//import com.nightscout.android.Nightscout;
 import com.nightscout.android.R;
 import com.nightscout.android.dexcom.USB.USBPower;
 import com.nightscout.android.dexcom.USB.UsbSerialDriver;
@@ -27,7 +27,7 @@ import com.nightscout.android.TimeConstants;
 import com.nightscout.android.dexcom.records.SensorRecord;
 import com.nightscout.android.upload.Uploader;
 
-import org.acra.ACRA;
+//import org.acra.ACRA;
 import org.json.JSONArray;
 
 import java.io.IOException;
@@ -113,7 +113,7 @@ public class SyncingService extends IntentService {
     private void handleActionSync(int numOfPages) {
         boolean broadcastSent = false;
         boolean rootEnabled=PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("root_support_enabled",false);
-        Tracker tracker = ((Nightscout) getApplicationContext()).getTracker();
+//        Tracker tracker = ((Nightscout) getApplicationContext()).getTracker();
 
         if (rootEnabled) USBPower.PowerOn();
 
@@ -169,27 +169,27 @@ public class SyncingService extends IntentService {
                                  displayTime, array ,batLevel);
                 broadcastSent=true;
             } catch (IOException e) {
-                tracker.send(new HitBuilders.ExceptionBuilder()
-                                .setDescription("Unable to close serial connection")
-                                .setFatal(false)
-                                .build()
-                );
+//                tracker.send(new HitBuilders.ExceptionBuilder()
+//                                .setDescription("Unable to close serial connection")
+//                                .setFatal(false)
+//                                .build()
+//                );
                 Log.e(TAG, "Unable to close", e);
             } catch (ArrayIndexOutOfBoundsException e) {
                 Log.wtf("Unable to read from the dexcom, maybe it will work next time", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Array Index out of bounds")
-                        .setFatal(false)
-                        .build());
+//                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Array Index out of bounds")
+//                        .setFatal(false)
+//                        .build());
             } catch (NegativeArraySizeException e) {
                 Log.wtf("Negative array exception from receiver", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Negative Array size")
-                        .setFatal(false)
-                        .build());
+//                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Negative Array size")
+//                        .setFatal(false)
+//                        .build());
             } catch (IndexOutOfBoundsException e) {
                 Log.wtf("IndexOutOfBounds exception from receiver", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("IndexOutOfBoundsException")
-                        .setFatal(false)
-                        .build());
+//                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("IndexOutOfBoundsException")
+//                        .setFatal(false)
+//                        .build());
             } catch (CRCFailRuntimeException e){
                 // FIXME: may consider localizing this catch at a lower level (like ReadData) so that
                 // if the CRC check fails on one type of record we can capture the values if it
@@ -197,14 +197,14 @@ public class SyncingService extends IntentService {
                 // partial results to the UI. Adding it to a lower level could make the ReadData class
                 // more difficult to maintain - needs discussion.
                 Log.wtf("CRC failed", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("CRC Failed")
-                        .setFatal(false)
-                        .build());
+//                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("CRC Failed")
+//                        .setFatal(false)
+//                        .build());
             } catch (Exception e) {
                 Log.wtf("Unhandled exception caught", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Catch all exception in handleActionSync")
-                        .setFatal(false)
-                        .build());
+//                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Catch all exception in handleActionSync")
+//                        .setFatal(false)
+//                        .build());
             }
         }
         if (!broadcastSent)
@@ -221,13 +221,13 @@ public class SyncingService extends IntentService {
                 return true;
             } catch (IOException e) {
                 Log.e(TAG, "Unable to open USB. ", e);
-                Tracker tracker;
-                tracker = ((Nightscout) getApplicationContext()).getTracker();
-                tracker.send(new HitBuilders.ExceptionBuilder()
-                                .setDescription("Unable to open serial connection")
-                                .setFatal(false)
-                                .build()
-                );
+//                Tracker tracker;
+//                tracker = ((Nightscout) getApplicationContext()).getTracker();
+//                tracker.send(new HitBuilders.ExceptionBuilder()
+//                                .setDescription("Unable to open serial connection")
+//                                .setFatal(false)
+//                                .build()
+//                );
             }
         } else {
             Log.d(TAG, "Unable to acquire USB device from manager.");

@@ -39,7 +39,7 @@ public class Utils {
         if (hours > 0) {
             timeAgoString += hours + " hours ";
         }
-        if (minutes >= 0) {
+        if (minutes > 0) {
             timeAgoString += minutes + " min ";
         }
 

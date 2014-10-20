@@ -22,7 +22,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.analytics.GoogleAnalytics;
 import com.google.android.gms.analytics.HitBuilders;
-import com.google.android.gms.analytics.Tracker;
+//import com.google.android.gms.analytics.Tracker;
 import com.nightscout.android.dexcom.Constants;
 import com.nightscout.android.dexcom.SyncingService;
 import com.nightscout.android.dexcom.Utils;
@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     private long receiverOffsetFromUploader = 0;
 
     // Analytics mTracker
-    Tracker mTracker;
+//    Tracker mTracker;
 
     // UI components
     private WebView mWebView;
@@ -73,7 +73,7 @@ public class MainActivity extends Activity {
         // Add timezone ID to ACRA report
         ACRA.getErrorReporter().putCustomData("timezone", TimeZone.getDefault().getID());
 
-        mTracker = ((Nightscout) getApplicationContext()).getTracker();
+//        mTracker = ((Nightscout) getApplicationContext()).getTracker();
 
         mContext = getApplicationContext();
 
@@ -134,12 +134,12 @@ public class MainActivity extends Activity {
                 baseURIs.add(baseURL + (baseURL.endsWith("/") ? "" : "/"));
                 String apiVersion;
                 apiVersion=(baseURL.endsWith("/v1/"))?"WebAPIv1":"Legacy WebAPI";
-                mTracker.send(new HitBuilders.EventBuilder("Upload", apiVersion).build());
+//                mTracker.send(new HitBuilders.EventBuilder("Upload", apiVersion).build());
             }
         }
-        if (prefs.getBoolean("cloud_storage_mongodb_enable", false)) {
-            mTracker.send(new HitBuilders.EventBuilder("Upload", "Mongo").build());
-        }
+//        if (prefs.getBoolean("cloud_storage_mongodb_enable", false)) {
+//            mTracker.send(new HitBuilders.EventBuilder("Upload", "Mongo").build());
+//        }
     }
 
     @Override
@@ -278,7 +278,7 @@ public class MainActivity extends Activity {
 
             if (responseNextUploadTime > TimeConstants.FIVE_MINUTES_MS) {
                 Log.d(TAG, "Receiver's time is less than current record time, possible time change.");
-                mTracker.send(new HitBuilders.EventBuilder("Main", "Time change").build());
+//                mTracker.send(new HitBuilders.EventBuilder("Main", "Time change").build());
             } else if (responseNextUploadTime > 0) {
                 Log.d(TAG, "Setting next upload time to: " + responseNextUploadTime);
                 nextUploadTime = responseNextUploadTime;
@@ -288,7 +288,7 @@ public class MainActivity extends Activity {
 
             if (Math.abs(new Date().getTime()-responseDisplayTime) >= TimeConstants.TWENTY_MINUTES_MS) {
                 Log.w(TAG, "Receiver time is off by 20 minutes or more.");
-                mTracker.send(new HitBuilders.EventBuilder("Main", "Time difference > 20 minutes").build());
+//                mTracker.send(new HitBuilders.EventBuilder("Main", "Time difference > 20 minutes").build());
                 statusBarIcons.setTimeIndicator(false);
             } else {
                 statusBarIcons.setTimeIndicator(true);
