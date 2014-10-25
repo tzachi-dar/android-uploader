@@ -10,6 +10,7 @@ import java.util.TimeZone;
 
 public class Utils {
 
+    // returns the current data based on dexcom delta from some data
     public static Date receiverTimeToDate(long delta) {
         int currentTZOffset = TimeZone.getDefault().getRawOffset();
         long epochMS = 1230768000000L;  // Jan 01, 2009 00:00 in UTC

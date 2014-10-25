@@ -114,7 +114,8 @@ public class MainActivity extends Activity {
         // If app started due to android.hardware.usb.action.USB_DEVICE_ATTACHED intent, start syncing
         Intent startIntent = getIntent();
         String action = startIntent.getAction();
-        if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action) || SyncingService.isG4Connected(getApplicationContext())) {
+        //if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action) || SyncingService.isG4Connected(getApplicationContext())) {
+        if(true){
             statusBarIcons.setUSB(true);
             Log.d(TAG, "Starting syncing in OnCreate...");
             SyncingService.startActionSingleSync(mContext, SyncingService.MIN_SYNC_PAGES);
@@ -249,6 +250,9 @@ public class MainActivity extends Activity {
             int rcvrBat = intent.getIntExtra(SyncingService.RESPONSE_BAT, -1);
             String json = intent.getStringExtra(SyncingService.RESPONSE_JSON);
 
+            Log.d(TAG, "onReceive called: responseSGV = " + responseSGV);
+            
+            
             String responseSGVStr = getSGVStringByUnit(responseSGV,trend);
 
             // Reload d3 chart with new data

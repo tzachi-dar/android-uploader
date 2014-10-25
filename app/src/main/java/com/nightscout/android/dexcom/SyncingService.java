@@ -29,11 +29,24 @@ import com.nightscout.android.upload.Uploader;
 
 import org.acra.ACRA;
 import org.json.JSONArray;
+import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous CGM Receiver downloads and cloud uploads
@@ -106,6 +119,110 @@ public class SyncingService extends IntentService {
         }
     }
 
+    public static TransmitterRawData[] Read(String hostName,int port)
+    {
+        List<TransmitterRawData> trd_list = new ArrayList<TransmitterRawData>();
+        TransmitterRawData []trd_array;
+        try
+        {
+            
+            Gson gson = new GsonBuilder().create();
+
+            // An example of using gson.
+            ComunicationHeader ch = new ComunicationHeader();
+            ch.version = 1;
+            ch.numberOfRecords = 300;
+            String flat = gson.toJson(ch);
+            ComunicationHeader ch2 = gson.fromJson(flat, ComunicationHeader.class);  
+            System.out.println("Results code" + flat + ch2.version);
+
+
+            // Real client code
+            Socket MySocket = new Socket(hostName, port);
+
+            System.out.println("After the new socket \n");
+            MySocket.setSoTimeout(2000); 
+                     
+            System.out.println("client connected... " );
+            
+            PrintWriter out = new PrintWriter(MySocket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(new InputStreamReader(MySocket.getInputStream()));
+
+            out.println(flat);
+            
+            while(true) {
+                String data = in.readLine();
+                if(data == null) {
+                    System.out.println("recieved null exiting");
+                    break;
+                }
+                if(data.equals("")) {
+                    System.out.println("recieved \"\" exiting");
+                    break;
+                }
+
+                System.out.println( "data size " +data.length() + " data = "+ data);
+                TransmitterRawData trd = gson.fromJson(data, TransmitterRawData.class);
+                trd_list.add(0,trd);
+                System.out.println( trd.toTableString());
+            }
+
+
+            MySocket.close();
+            trd_array = new TransmitterRawData[trd_list.size()];
+            trd_list.toArray(trd_array);
+            return trd_array;
+        }catch(SocketTimeoutException s) {
+            System.out.println("Socket timed out!...");
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+            System.out.println("cought exception " + e.getMessage());
+        }
+        trd_array = new TransmitterRawData[trd_list.size()];
+        trd_list.toArray(trd_array);
+        return trd_array;
+    }
+    
+    int ConvertTransmiterValues(int RawValue)
+    {
+        return (RawValue - 35000) / 667;
+    }
+    
+    // last in the array, is first in time
+    private EGVRecord[] ConvertValues(TransmitterRawData[] RawData)
+    {
+        EGVRecord []EGVRecords = new EGVRecord[RawData.length];
+        for(int i=0; i < RawData.length; i++) {
+            EGVRecords[i] = new EGVRecord();
+            EGVRecords[i].bGValue = ConvertTransmiterValues(RawData[i].RawValue);
+            EGVRecords[i].displayTime = new Date(System.currentTimeMillis() - RawData[i].RelativeTime);
+        }
+        return EGVRecords;
+        
+    }
+    
+    private EGVRecord[] getRecentEGVsPages(int numOfRecentPages) {
+        EGVRecord[] evgRecords;
+        TransmitterRawData[] RawData = Read("192.168.1.25", 50005);
+        
+        return ConvertValues(RawData);
+        
+    }
+    
+    
+    // last in the array, is first in time
+    private EGVRecord[] getFakedRecentEGVsPages(int numOfRecentPages) {
+        int data_size = numOfRecentPages * 20;
+        EGVRecord[] evgRecord = new EGVRecord[data_size];
+        for(int i=0; i < data_size; i++) {
+            evgRecord[i] = new EGVRecord();
+            evgRecord[i].bGValue = 40 + i%100;
+            evgRecord[i].displayTime = new Date(System.currentTimeMillis() - 300000 *((data_size - i)%100));
+        }
+        return evgRecord;
+    }
+    
     /**
      * Handle action Sync in the provided background thread with the provided
      * parameters.
@@ -121,41 +238,53 @@ public class SyncingService extends IntentService {
         PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NSDownload");
         wl.acquire();
 
-        if (acquireSerialDevice()) {
+        if (true || acquireSerialDevice()) {
             try {
-                ReadData readData = new ReadData(mSerialDevice);
+                Log.d(TAG, "Starting fake read loop");
+//???                ReadData readData = new ReadData(mSerialDevice);
                 // TODO: need to check if numOfPages if valid on ReadData side
-                EGVRecord[] recentRecords = readData.getRecentEGVsPages(numOfPages);
-                MeterRecord[] meterRecords = readData.getRecentMeterRecords();
+                EGVRecord[] recentRecords = /*readData. */ getRecentEGVsPages(numOfPages);
+//                MeterRecord[] meterRecords = readData.getRecentMeterRecords();
                 // TODO: need to check if numOfPages if valid on ReadData side
-                SensorRecord[] sensorRecords = readData.getRecentSensorRecords(numOfPages);
-                GlucoseDataSet[] glucoseDataSets = Utils.mergeGlucoseDataRecords(recentRecords, sensorRecords);
-                CalRecord[] calRecords = readData.getRecentCalRecords();
+//                SensorRecord[] sensorRecords = readData.getRecentSensorRecords(numOfPages);
+//                GlucoseDataSet[] glucoseDataSets = Utils.mergeGlucoseDataRecords(recentRecords, sensorRecords);
+//                CalRecord[] calRecords = readData.getRecentCalRecords();
 
-                long timeSinceLastRecord = readData.getTimeSinceEGVRecord(recentRecords[recentRecords.length - 1]);
+                long timeSinceLastRecord = 100;//??????????? readData.getTimeSinceEGVRecord(recentRecords[recentRecords.length - 1]);
                 // TODO: determine if the logic here is correct. I suspect it assumes the last record was less than 5
                 // minutes ago. If a reading is skipped and the device is plugged in then nextUploadTime will be
                 // set to a negative number. This situation will eventually correct itself.
-                long nextUploadTime = TimeConstants.FIVE_MINUTES_MS - (timeSinceLastRecord * TimeConstants.SEC_TO_MS);
-                long displayTime = readData.readDisplayTime().getTime();
-                int batLevel = readData.readBatteryLevel();
+                long nextUploadTime = 10000; //?????TimeConstants.FIVE_MINUTES_MS - (timeSinceLastRecord * TimeConstants.SEC_TO_MS);
+                long displayTime = new Date().getTime(); ///????? readData.readDisplayTime().getTime();
+                int batLevel = 70;//???readData.readBatteryLevel();
 
                 // Close serial
-                mSerialDevice.close();
+                if(false) {
+                    mSerialDevice.close();
+                }
 
                 // Try powering off, will only work if rooted
                 if (rootEnabled) USBPower.PowerOff();
 
                 // convert into json for d3 plot
                 JSONArray array = new JSONArray();
-                for (int i = 0; i < recentRecords.length; i++) array.put(recentRecords[i].toJSON());
+//                for (int i = 0; i < recentRecords.length; i++) array.put(recentRecords[i].toJSON());
+                for (int i = 0; i < recentRecords.length; i++) {
+                    Log.d(TAG, "In loop i = "+ i);
+                    EGVRecord  ev = recentRecords[i];
+                    Log.d(TAG, "In loop i = "+ i+ " ev = " + ev);
+                    JSONObject j =  recentRecords[i].toJSON();
+                    Log.d(TAG, "In loop i = "+ i+ " j = " + j);
+                    array.put(j);
+                }
 
-                Uploader uploader = new Uploader(mContext);
+//                Uploader uploader = new Uploader(mContext);
                 // TODO: This should be cleaned up, 5 should be a constant, maybe handle in uploader,
                 // and maybe might not have to read 5 pages (that was only done for single sync for UI
                 // plot updating and might be able to be done in javascript d3 code as a FIFO array
                 // Only upload 1 record unless forcing a sync
-                boolean uploadStatus;
+                boolean uploadStatus = true; //?????false;
+/*                
                 if (numOfPages < 20) {
                     uploadStatus = uploader.upload(glucoseDataSets[glucoseDataSets.length - 1],
                                     meterRecords[meterRecords.length - 1],
@@ -163,10 +292,11 @@ public class SyncingService extends IntentService {
                 } else {
                     uploadStatus = uploader.upload(glucoseDataSets, meterRecords, calRecords);
                 }
-
+*/
                 EGVRecord recentEGV = recentRecords[recentRecords.length - 1];
+                Log.d(TAG, "Before broadcast");
                 broadcastSGVToUI(recentEGV, uploadStatus, nextUploadTime + TIME_SYNC_OFFSET,
-                                 displayTime, array ,batLevel);
+                                 displayTime, array ,batLevel); ///?????????? good, but not enough ?????
                 broadcastSent=true;
             } catch (IOException e) {
                 tracker.send(new HitBuilders.ExceptionBuilder()
@@ -208,7 +338,11 @@ public class SyncingService extends IntentService {
             }
         }
 
-        if (!broadcastSent) broadcastSGVToUI();
+        if (!broadcastSent) {
+            Log.d(TAG, "broadcast of no data...");
+            broadcastSGVToUI();
+        }
+        
 
         wl.release();
     }

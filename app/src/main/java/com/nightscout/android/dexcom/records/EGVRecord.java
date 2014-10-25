@@ -13,9 +13,15 @@ import java.util.Date;
 
 public class EGVRecord extends GenericTimestampRecord {
 
-    private int bGValue;
+    public int bGValue;
     private Constants.TREND_ARROW_VALUES trend;
 
+    
+    public EGVRecord()
+    {
+        //super(null);
+        trend = Constants.TREND_ARROW_VALUES.values()[0];
+    }
     public EGVRecord(byte[] packet) {
         // system_time (UInt), display_time (UInt), glucose (UShort), trend_arrow (Byte), crc (UShort))
         super(packet);

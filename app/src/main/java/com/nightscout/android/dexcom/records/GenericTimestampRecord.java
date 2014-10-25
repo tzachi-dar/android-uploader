@@ -12,8 +12,12 @@ public class GenericTimestampRecord {
     private final int OFFSET_DISPLAY_TIME = 4;
     private Date systemTime;
     private int systemTimeSeconds;
-    private Date displayTime;
+    public Date displayTime;
 
+    public GenericTimestampRecord() {
+        displayTime = new Date();
+    }
+    
     public GenericTimestampRecord(byte[] packet) {
         systemTimeSeconds = ByteBuffer.wrap(packet).order(ByteOrder.LITTLE_ENDIAN).getInt(OFFSET_SYS_TIME);
         systemTime = Utils.receiverTimeToDate(systemTimeSeconds);

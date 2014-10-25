@@ -273,14 +273,14 @@ var latestSGV,
         //offset = (MINUTE * MINUTES_SINCE_LAST_UPDATE_URGENT) + 60
 
         if (offset <= MINUTE)              parts = { label: 'now' };
-        if (offset <= MINUTE * 2)          parts = { label: '1 min ago' };
+        if (offset <= MINUTE * 2)          parts = { label: '1 min agox' };
         else if (offset < (MINUTE * 60))   parts = { value: Math.round(Math.abs(offset / MINUTE)), label: 'mins' };
-        else if (offset < (HOUR * 2))      parts = { label: '1 hr ago' };
+        else if (offset < (HOUR * 2))      parts = { label: '1 hr agox' };
         else if (offset < (HOUR * 24))     parts = { value: Math.round(Math.abs(offset / HOUR)), label: 'hrs' };
-        else if (offset < DAY)             parts = { label: '1 day ago' };
+        else if (offset < DAY)             parts = { label: '1 day agox' };
         else if (offset < (DAY * 7))       parts = { value: Math.round(Math.abs(offset / DAY)), label: 'day' };
         else if (offset < (WEEK * 52))     parts = { value: Math.round(Math.abs(offset / WEEK)), label: 'week' };
-        else                               parts = { label: 'a long time ago' };
+        else                               parts = { label: 'a long time agox' };
 
         if (offset > (MINUTE * MINUTES_SINCE_LAST_UPDATE_URGENT)) {
             var lastEntry = $("#lastEntry");
@@ -298,7 +298,7 @@ var latestSGV,
         }
 
         if (parts.value)
-            return parts.value + ' ' + parts.label + ' ago';
+            return parts.value + ' ' + parts.label + ' agox';
         else
             return parts.label;
 
