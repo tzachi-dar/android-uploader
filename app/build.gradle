@@ -73,6 +73,7 @@ dependencies {
     compile 'com.android.support:support-v4:20.0.0'
     compile 'com.google.android.gms:play-services:5.0.89'
     compile 'org.mongodb:mongo-java-driver:2.10.1'
+    compile files('libs/gson-2.2.2.jar')
     compile 'joda-time:joda-time:2.5'
     compile 'com.google.guava:guava:18.0'
     compile 'org.slf4j:slf4j-android:1.7.7'
