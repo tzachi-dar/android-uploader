@@ -26,6 +26,7 @@ import com.google.android.gms.analytics.Tracker;
 import com.nightscout.android.dexcom.Constants;
 import com.nightscout.android.dexcom.SyncingService;
 import com.nightscout.android.dexcom.Utils;
+import com.nightscout.android.dexcom.WixelReader;
 import com.nightscout.android.settings.SettingsActivity;
 
 import org.acra.ACRA;
@@ -114,7 +115,7 @@ public class MainActivity extends Activity {
         // If app started due to android.hardware.usb.action.USB_DEVICE_ATTACHED intent, start syncing
         Intent startIntent = getIntent();
         String action = startIntent.getAction();
-        if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action) || SyncingService.isG4Connected(getApplicationContext())) {
+        if (WixelReader.IsConfigured() || UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action) || SyncingService.isG4Connected(getApplicationContext())) {
             statusBarIcons.setUSB(true);
             Log.d(TAG, "Starting syncing in OnCreate...");
             SyncingService.startActionSingleSync(mContext, SyncingService.MIN_SYNC_PAGES);

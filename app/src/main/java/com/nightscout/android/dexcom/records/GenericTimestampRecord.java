@@ -20,6 +20,8 @@ public class GenericTimestampRecord {
         int dt = ByteBuffer.wrap(packet).order(ByteOrder.LITTLE_ENDIAN).getInt(OFFSET_DISPLAY_TIME);
         displayTime = Utils.receiverTimeToDate(dt);
     }
+    public GenericTimestampRecord() {
+    }
 
     public GenericTimestampRecord(Date displayTime, Date systemTime){
         this.displayTime=displayTime;
@@ -29,6 +31,8 @@ public class GenericTimestampRecord {
     public Date getSystemTime() {
         return systemTime;
     }
+    
+ 
 
     public int getSystemTimeSeconds() {
         return systemTimeSeconds;
@@ -37,6 +41,11 @@ public class GenericTimestampRecord {
     public Date getDisplayTime() {
         return displayTime;
     }
+
+    public void setDisplayTime(Date dt) {
+        displayTime = dt;
+    }
+    
     public long getDisplayTimeSeconds() {
         return displayTime.getTime();
     }
