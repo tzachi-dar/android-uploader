@@ -14,6 +14,11 @@ public class EGVRecord extends GenericTimestampRecord {
     private int bGValue;
     private Constants.TREND_ARROW_VALUES trend;
 
+    
+    public EGVRecord()
+    {
+        trend = Constants.TREND_ARROW_VALUES.values()[0];
+    }
     public EGVRecord(byte[] packet) {
         // system_time (UInt), display_time (UInt), glucose (UShort), trend_arrow (Byte), crc (UShort))
         super(packet);
@@ -32,7 +37,11 @@ public class EGVRecord extends GenericTimestampRecord {
     public int getBGValue() {
         return bGValue;
     }
-
+    public void setBGValue(int bGValue) {
+        this.bGValue = bGValue;
+    }
+    
+    
     public Constants.TREND_ARROW_VALUES getTrend() {
         return trend;
     }
@@ -47,4 +56,5 @@ public class EGVRecord extends GenericTimestampRecord {
         }
         return obj;
     }
+
 }

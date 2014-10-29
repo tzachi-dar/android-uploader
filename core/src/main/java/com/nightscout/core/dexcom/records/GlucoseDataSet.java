@@ -14,6 +14,9 @@ public class GlucoseDataSet {
     private long filtered;
     private int rssi;
 
+    public GlucoseDataSet() {
+    }
+    
     public GlucoseDataSet(EGVRecord egvRecord, SensorRecord sensorRecord) {
         // TODO check times match between record
         systemTime = egvRecord.getSystemTime();

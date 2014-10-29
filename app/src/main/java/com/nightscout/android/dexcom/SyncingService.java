@@ -128,36 +128,81 @@ public class SyncingService extends IntentService {
         PowerManager pm = (PowerManager) getApplicationContext().getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NSDownload");
         wl.acquire();
-
+        EGVRecord[] recentRecords = null;
+        List<MeterRecord> meterRecords = null;
+        List<GlucoseDataSet> glucoseDataSetsList = null;
+        int batLevel = 0;
+        long displayTime = 0;
+        long nextUploadTime = 0;
+        List<CalRecord> calRecordsList = null;
+        try {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
         if (acquireSerialDevice()) {
+           
             try {
                 ReadData readData = new ReadData(mSerialDevice);
                 // TODO: need to check if numOfPages if valid on ReadData side
-                EGVRecord[] recentRecords = readData.getRecentEGVsPages(numOfPages);
-                List<MeterRecord> meterRecords = Lists.newArrayList(readData.getRecentMeterRecords());
+                recentRecords = readData.getRecentEGVsPages(numOfPages);
+                meterRecords = Lists.newArrayList(readData.getRecentMeterRecords());
                 // TODO: need to check if numOfPages if valid on ReadData side
                 SensorRecord[] sensorRecords = readData.getRecentSensorRecords(numOfPages);
                 GlucoseDataSet[] glucoseDataSets = Utils.mergeGlucoseDataRecords(recentRecords, sensorRecords);
 
                 // FIXME: This is a workaround for the new Dexcom AP which seems to have a new format
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+                
                 CalRecord[] calRecords = new CalRecord[1];
                 if (prefs.getBoolean("cloud_cal_data", false)) {
                     calRecords = readData.getRecentCalRecords();
                 }
-                List<GlucoseDataSet> glucoseDataSetsList = Lists.newArrayList(glucoseDataSets);
-                List<CalRecord> calRecordsList = Lists.newArrayList(calRecords);
+                glucoseDataSetsList = Lists.newArrayList(glucoseDataSets);
+                calRecordsList = Lists.newArrayList(calRecords);
 
                 long timeSinceLastRecord = readData.getTimeSinceEGVRecord(recentRecords[recentRecords.length - 1]);
                 // TODO: determine if the logic here is correct. I suspect it assumes the last record was less than 5
                 // minutes ago. If a reading is skipped and the device is plugged in then nextUploadTime will be
                 // set to a negative number. This situation will eventually correct itself.
-                long nextUploadTime = standardMinutes(5).minus(standardSeconds(timeSinceLastRecord)).getMillis();
-                long displayTime = readData.readDisplayTime().getTime();
+                nextUploadTime = standardMinutes(5).minus(standardSeconds(timeSinceLastRecord)).getMillis();
+                displayTime = readData.readDisplayTime().getTime();
                 // FIXME: Device seems to flake out on battery level reads. Removing for now.
 //                int batLevel = readData.readBatteryLevel();
-                int batLevel = 100;
-
+                batLevel = 100;
+                } finally {
+                    // Close serial
+		            try {
+		                mSerialDevice.close();
+		            } catch (IOException e) {
+		                tracker.send(new HitBuilders.ExceptionBuilder()
+		                                .setDescription("Unable to close serial connection")
+		                                .setFatal(false)
+		                                .build()
+		                );
+		                Log.e(TAG, "Unable to close", e);
+                    }
+            	}
+            } else {
+            
+                TransmitterRawData[] RawData = WixelReader.Read("192.168.1.25", 50005);
+                if(RawData == null || RawData.length == 0) {
+                    Log.e(TAG, "Read returned without data, throwing exception instead of crashing soon" );
+                    throw new ArrayIndexOutOfBoundsException("Read returned without data, throwing exception instead of crashing soon");
+                }
+            
+                recentRecords =  WixelReader.ConvertValues(RawData);
+             
+                MeterRecord[] meterRecordsSet = new MeterRecord[1];
+                meterRecordsSet[0] = new MeterRecord(0,0);
+                meterRecords = Lists.newArrayList(meterRecordsSet);
+                GlucoseDataSet[] glucoseDataSets = new GlucoseDataSet[1];
+                glucoseDataSets[0] = new GlucoseDataSet();
+                glucoseDataSetsList = Lists.newArrayList(glucoseDataSets);
+                
+                batLevel = RawData[recentRecords.length - 1].BatteryLife ; // TODO, fix this
+                displayTime = new Date().getTime(); //TODO
+                nextUploadTime = 10000;// correct, but need to see if work TimeConstants.FIVE_MINUTES_MS - TransmitterRawData[recentRecords.length - 1]. + 2000;//?? 
+                CalRecord[] calRecords = new CalRecord[1];
+                calRecords[0] = new CalRecord();
+                calRecordsList = Lists.newArrayList(calRecords);
+            }
                 // convert into json for d3 plot
                 JSONArray array = new JSONArray();
                 for (int i = 0; i < recentRecords.length; i++) array.put(recentRecords[i].toJSON());
@@ -178,6 +223,7 @@ public class SyncingService extends IntentService {
                 }
 
                 EGVRecord recentEGV = recentRecords[recentRecords.length - 1];
+                Log.d(TAG, "Before broadcast");
                 broadcastSGVToUI(recentEGV, uploadStatus, nextUploadTime + TIME_SYNC_OFFSET,
                                  displayTime, array ,batLevel);
                 broadcastSent=true;
@@ -213,23 +259,15 @@ public class SyncingService extends IntentService {
                         .build());
             } finally {
                 // Close serial
-                try {
-                    mSerialDevice.close();
-                } catch (IOException e) {
-                    tracker.send(new HitBuilders.ExceptionBuilder()
-                                    .setDescription("Unable to close serial connection")
-                                    .setFatal(false)
-                                    .build()
-                    );
-                    Log.e(TAG, "Unable to close", e);
-                }
-
                 // Try powering off, will only work if rooted
                 if (rootEnabled) USBPower.PowerOff();
             }
-        }
+        //???}
 
-        if (!broadcastSent) broadcastSGVToUI();
+        if (!broadcastSent) {
+            Log.d(TAG, "broadcast of no data...");
+            broadcastSGVToUI();
+        }
 
         wl.release();
     }
