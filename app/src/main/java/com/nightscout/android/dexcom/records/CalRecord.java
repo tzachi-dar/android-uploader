@@ -16,6 +16,9 @@ public class CalRecord extends GenericTimestampRecord {
     private CalSubrecord[] calSubrecords = new CalSubrecord[6];
     private int SUB_LEN = 17;
 
+    public CalRecord() {
+        
+    }
     public CalRecord(byte[] packet) {
         super(packet);
         slope = ByteBuffer.wrap(packet).order(ByteOrder.LITTLE_ENDIAN).getDouble(8);

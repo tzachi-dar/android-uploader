@@ -119,99 +119,132 @@ public class SyncingService extends IntentService {
         PowerManager pm = (PowerManager) getApplicationContext().getSystemService(Context.POWER_SERVICE);
         PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "NSDownload");
         wl.acquire();
+        EGVRecord[] recentRecords = null;
+        MeterRecord[] meterRecords = null;
+        GlucoseDataSet[] glucoseDataSets = null;
+        int batLevel = 0;
+        long displayTime = 0;
+        long nextUploadTime = 0;
+        CalRecord[] calRecords = null;
+        try {
+	        if (acquireSerialDevice()) {
+	            try {
+	                ReadData readData = new ReadData(mSerialDevice);
+	                // TODO: need to check if numOfPages if valid on ReadData side
+	                recentRecords = readData.getRecentEGVsPages(numOfPages);
+	                meterRecords = readData.getRecentMeterRecords();
+	                // TODO: need to check if numOfPages if valid on ReadData side
+	                SensorRecord[] sensorRecords = readData.getRecentSensorRecords(numOfPages);
+	                glucoseDataSets = Utils.mergeGlucoseDataRecords(recentRecords, sensorRecords);
+	                calRecords = readData.getRecentCalRecords();
 
-        if (acquireSerialDevice()) {
-            try {
-                ReadData readData = new ReadData(mSerialDevice);
-                // TODO: need to check if numOfPages if valid on ReadData side
-                EGVRecord[] recentRecords = readData.getRecentEGVsPages(numOfPages);
-                MeterRecord[] meterRecords = readData.getRecentMeterRecords();
-                // TODO: need to check if numOfPages if valid on ReadData side
-                SensorRecord[] sensorRecords = readData.getRecentSensorRecords(numOfPages);
-                GlucoseDataSet[] glucoseDataSets = Utils.mergeGlucoseDataRecords(recentRecords, sensorRecords);
-                CalRecord[] calRecords = readData.getRecentCalRecords();
-
-                long timeSinceLastRecord = readData.getTimeSinceEGVRecord(recentRecords[recentRecords.length - 1]);
-                // TODO: determine if the logic here is correct. I suspect it assumes the last record was less than 5
-                // minutes ago. If a reading is skipped and the device is plugged in then nextUploadTime will be
-                // set to a negative number. This situation will eventually correct itself.
-                long nextUploadTime = TimeConstants.FIVE_MINUTES_MS - (timeSinceLastRecord * TimeConstants.SEC_TO_MS);
-                long displayTime = readData.readDisplayTime().getTime();
-                // FIXME: Device seems to flake out on battery level reads. Removing for now.
-//                int batLevel = readData.readBatteryLevel();
-                int batLevel = 100;
-
-                // convert into json for d3 plot
-                JSONArray array = new JSONArray();
-                for (int i = 0; i < recentRecords.length; i++) array.put(recentRecords[i].toJSON());
-
-                Uploader uploader = new Uploader(mContext);
-                // TODO: This should be cleaned up, 5 should be a constant, maybe handle in uploader,
-                // and maybe might not have to read 5 pages (that was only done for single sync for UI
-                // plot updating and might be able to be done in javascript d3 code as a FIFO array
-                // Only upload 1 record unless forcing a sync
-                boolean uploadStatus;
-                if (numOfPages < 20) {
-                    uploadStatus = uploader.upload(glucoseDataSets[glucoseDataSets.length - 1],
-                                    meterRecords[meterRecords.length - 1],
-                                    calRecords[calRecords.length - 1]);
-                } else {
-                    uploadStatus = uploader.upload(glucoseDataSets, meterRecords, calRecords);
+	                long timeSinceLastRecord = readData.getTimeSinceEGVRecord(recentRecords[recentRecords.length - 1]);
+	                // TODO: determine if the logic here is correct. I suspect it assumes the last record was less than 5
+	                // minutes ago. If a reading is skipped and the device is plugged in then nextUploadTime will be
+	                // set to a negative number. This situation will eventually correct itself.
+	                nextUploadTime = TimeConstants.FIVE_MINUTES_MS - (timeSinceLastRecord * TimeConstants.SEC_TO_MS);
+	                displayTime = readData.readDisplayTime().getTime();
+	                // FIXME: Device seems to flake out on battery level reads. Removing for now.
+	//                int batLevel = readData.readBatteryLevel();
+	                batLevel = 100;
+                } finally {
+                    // Close serial
+		            try {
+		                mSerialDevice.close();
+		            } catch (IOException e) {
+		                tracker.send(new HitBuilders.ExceptionBuilder()
+		                                .setDescription("Unable to close serial connection")
+		                                .setFatal(false)
+		                                .build()
+		                );
+		                Log.e(TAG, "Unable to close", e);
+                    }
+            	}
+            } else {
+            
+                TransmitterRawData[] RawData = WixelReader.Read("192.168.1.25", 50005);
+                if(RawData == null || RawData.length == 0) {
+                    Log.e(TAG, "Read returned without data, throwing exception instead of crashing soon" );
+                    throw new ArrayIndexOutOfBoundsException("Read returned without data, throwing exception instead of crashing soon");
                 }
-
-                EGVRecord recentEGV = recentRecords[recentRecords.length - 1];
-                broadcastSGVToUI(recentEGV, uploadStatus, nextUploadTime + TIME_SYNC_OFFSET,
-                                 displayTime, array ,batLevel);
-                broadcastSent=true;
-            } catch (ArrayIndexOutOfBoundsException e) {
-                Log.wtf("Unable to read from the dexcom, maybe it will work next time", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Array Index out of bounds")
-                        .setFatal(false)
-                        .build());
-            } catch (NegativeArraySizeException e) {
-                Log.wtf("Negative array exception from receiver", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Negative Array size")
-                        .setFatal(false)
-                        .build());
-            } catch (IndexOutOfBoundsException e) {
-                Log.wtf("IndexOutOfBounds exception from receiver", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("IndexOutOfBoundsException")
-                        .setFatal(false)
-                        .build());
-            } catch (CRCFailRuntimeException e){
-                // FIXME: may consider localizing this catch at a lower level (like ReadData) so that
-                // if the CRC check fails on one type of record we can capture the values if it
-                // doesn't fail on other types of records. This means we'd need to broadcast back
-                // partial results to the UI. Adding it to a lower level could make the ReadData class
-                // more difficult to maintain - needs discussion.
-                Log.wtf("CRC failed", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("CRC Failed")
-                        .setFatal(false)
-                        .build());
-            } catch (Exception e) {
-                Log.wtf("Unhandled exception caught", e);
-                tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Catch all exception in handleActionSync")
-                        .setFatal(false)
-                        .build());
-            } finally {
-                // Close serial
-                try {
-                    mSerialDevice.close();
-                } catch (IOException e) {
-                    tracker.send(new HitBuilders.ExceptionBuilder()
-                                    .setDescription("Unable to close serial connection")
-                                    .setFatal(false)
-                                    .build()
-                    );
-                    Log.e(TAG, "Unable to close", e);
-                }
-
-                // Try powering off, will only work if rooted
-                if (rootEnabled) USBPower.PowerOff();
+            
+                recentRecords =  WixelReader.ConvertValues(RawData);
+            
+                meterRecords = new MeterRecord[1];
+                meterRecords[0] = new MeterRecord(0,0); //TODO: Fix this
+                glucoseDataSets = new GlucoseDataSet[1];
+                glucoseDataSets[0] = new GlucoseDataSet();
+                batLevel = RawData[recentRecords.length - 1].BatteryLife ; // TODO, fix this
+                displayTime = new Date().getTime(); //TODO
+                nextUploadTime = 10000;// correct, but need to see if work TimeConstants.FIVE_MINUTES_MS - TransmitterRawData[recentRecords.length - 1]. + 2000;//?? 
+                calRecords = new CalRecord[1];
+                calRecords[0] = new CalRecord();
             }
-        }
+            // convert into json for d3 plot
+            JSONArray array = new JSONArray();
+            for (int i = 0; i < recentRecords.length; i++) array.put(recentRecords[i].toJSON());
 
-        if (!broadcastSent) broadcastSGVToUI();
+            Uploader uploader = new Uploader(mContext);
+            // TODO: This should be cleaned up, 5 should be a constant, maybe handle in uploader,
+            // and maybe might not have to read 5 pages (that was only done for single sync for UI
+            // plot updating and might be able to be done in javascript d3 code as a FIFO array
+            // Only upload 1 record unless forcing a sync
+            boolean uploadStatus;
+            if (numOfPages < 20) {
+                uploadStatus = uploader.upload(glucoseDataSets[glucoseDataSets.length - 1],
+                                meterRecords[meterRecords.length - 1],
+                                calRecords[calRecords.length - 1]);
+            } else {
+                uploadStatus = uploader.upload(glucoseDataSets, meterRecords, calRecords);
+            }
+
+            EGVRecord recentEGV = recentRecords[recentRecords.length - 1];
+            Log.d(TAG, "Before broadcast");
+            broadcastSGVToUI(recentEGV, uploadStatus, nextUploadTime + TIME_SYNC_OFFSET,
+                             displayTime, array ,batLevel);
+            broadcastSent=true;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            Log.wtf("Unable to read from the dexcom, maybe it will work next time", e);
+            tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Array Index out of bounds")
+                    .setFatal(false)
+                    .build());
+        } catch (NegativeArraySizeException e) {
+            Log.wtf("Negative array exception from receiver", e);
+            tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Negative Array size")
+                    .setFatal(false)
+                    .build());
+        } catch (IndexOutOfBoundsException e) {
+            Log.wtf("IndexOutOfBounds exception from receiver", e);
+            tracker.send(new HitBuilders.ExceptionBuilder().setDescription("IndexOutOfBoundsException")
+                    .setFatal(false)
+                    .build());
+        } catch (CRCFailRuntimeException e){
+            // FIXME: may consider localizing this catch at a lower level (like ReadData) so that
+            // if the CRC check fails on one type of record we can capture the values if it
+            // doesn't fail on other types of records. This means we'd need to broadcast back
+            // partial results to the UI. Adding it to a lower level could make the ReadData class
+            // more difficult to maintain - needs discussion.
+            Log.wtf("CRC failed", e);
+            tracker.send(new HitBuilders.ExceptionBuilder().setDescription("CRC Failed")
+                    .setFatal(false)
+                    .build());
+        } catch (Exception e) {
+            Log.wtf("Unhandled exception caught", e);
+            tracker.send(new HitBuilders.ExceptionBuilder().setDescription("Catch all exception in handleActionSync")
+                    .setFatal(false)
+                    .build());
+        } finally {
+
+
+            // Try powering off, will only work if rooted
+            if (rootEnabled) USBPower.PowerOff();
+        }
+//???        }
+
+        if (!broadcastSent) {
+            Log.d(TAG, "broadcast of no data...");
+            broadcastSGVToUI();
+        }
 
         wl.release();
     }
