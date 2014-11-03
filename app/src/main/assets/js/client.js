@@ -68,6 +68,16 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
         updateChart(true);
     }
 
+    function sgv2Color(sgv) {
+	    if(sgv <= parseFloat(scaleBg(80))) {
+		return 'red';
+	    }
+	    if (sgv >= parseFloat(scaleBg(180))) {
+		    return 'yellow';
+	    }
+	    return 'green';
+   }
+
     // called for initial update and updates for resize
     function updateChart(init) {
 
@@ -127,7 +137,7 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
                     .attr('x2', xScale(new Date(Date.now())))
                     .attr('y2', yScale(scaleBg(180)))
                     .style('stroke-dasharray', ('3, 3'))
-                    .attr('stroke', 'grey');
+                    .attr('stroke', 'yellow');
 
                 // add a y-axis line that shows the low bg threshold
                 focus.append('line')
@@ -137,7 +147,7 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
                     .attr('x2', xScale(new Date(Date.now())))
                     .attr('y2', yScale(scaleBg(80)))
                     .style('stroke-dasharray', ('3, 3'))
-                    .attr('stroke', 'grey');
+                    .attr('stroke', 'red');
 
             } else {
 
@@ -185,13 +195,13 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
             .duration(UPDATE_TRANS_MS)
             .attr('cx', function (d) { return xScale(d.date); })
             .attr('cy', function (d) { return yScale(d.sgv); })
-            .attr('fill', function (d) { return d.color; });
+            .attr('fill', function(d) {return sgv2Color(d.sgv);})
 
         // if new circle then just display
         focusCircles.enter().append('circle')
             .attr('cx', function (d) { return xScale(d.date); })
             .attr('cy', function (d) { return yScale(d.sgv); })
-            .attr('fill', function (d) { return d.color; })
+            .attr('fill', function(d) {return sgv2Color(d.sgv);})
             .attr('r', function(d) { if (d.type == 'mbg') return 6; else return 2;});
 
         focusCircles.exit()
