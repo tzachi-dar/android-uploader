@@ -65,7 +65,7 @@ public class SyncingService extends IntentService {
     public static final String RESPONSE_JSON = "myJSON";
     public static final String RESPONSE_BAT = "myBatLvl";
 
-    private final String TAG = SyncingService.class.getSimpleName();
+    private final String TAG = SyncingService.class.getName();
     private Context mContext;
     private UsbManager mUsbManager;
     private UsbSerialDriver mSerialDevice;
@@ -119,6 +119,7 @@ public class SyncingService extends IntentService {
      * parameters.
      */
     private void handleActionSync(int numOfPages) {
+        Log.i(TAG, "handleActionSync called");
         boolean broadcastSent = false;
         boolean rootEnabled=PreferenceManager.getDefaultSharedPreferences(getApplicationContext()).getBoolean("root_support_enabled",false);
         Tracker tracker = ((Nightscout) getApplicationContext()).getTracker();
@@ -180,8 +181,10 @@ public class SyncingService extends IntentService {
                     }
             	}
             } else {
+
             
-                TransmitterRawData[] RawData = WixelReader.Read("192.168.1.25", 50005);
+               
+                TransmitterRawData[] RawData = WixelReader.Read("37.142.132.223" /*"192.168.1.25"*/, 50005);
                 if(RawData == null || RawData.length == 0) {
                     Log.e(TAG, "Read returned without data, throwing exception instead of crashing soon" );
                     throw new ArrayIndexOutOfBoundsException("Read returned without data, throwing exception instead of crashing soon");
@@ -197,6 +200,7 @@ public class SyncingService extends IntentService {
                 glucoseDataSetsList = Lists.newArrayList(glucoseDataSets);
                 
                 batLevel = RawData[recentRecords.length - 1].BatteryLife ; // TODO, fix this
+                batLevel = 100 ; // This is the receiver battery, I have no receiver???
                 displayTime = new Date().getTime(); //TODO
                 nextUploadTime = 10000;// correct, but need to see if work TimeConstants.FIVE_MINUTES_MS - TransmitterRawData[recentRecords.length - 1]. + 2000;//?? 
                 CalRecord[] calRecords = new CalRecord[1];
