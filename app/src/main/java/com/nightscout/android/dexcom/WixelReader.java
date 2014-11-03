@@ -9,13 +9,14 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-
+import android.util.Log;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.nightscout.android.dexcom.records.EGVRecord;
 
 public class WixelReader {
     
+    private final static String TAG = SyncingService.class.getName();
     // todo, should not be static...
     public static boolean IsConfigured() {
         return true;
@@ -27,7 +28,7 @@ public class WixelReader {
         TransmitterRawData []trd_array;
         try
         {
-            
+            Log.i(TAG, "Read called");
             Gson gson = new GsonBuilder().create();
 
             // An example of using gson.
@@ -73,6 +74,7 @@ public class WixelReader {
             MySocket.close();
             trd_array = new TransmitterRawData[trd_list.size()];
             trd_list.toArray(trd_array);
+            Log.i(TAG, "Read returning successfully with " + trd_list.size() + "results");
             return trd_array;
         }catch(SocketTimeoutException s) {
             System.out.println("Socket timed out!...");
@@ -83,6 +85,7 @@ public class WixelReader {
         }
         trd_array = new TransmitterRawData[trd_list.size()];
         trd_list.toArray(trd_array);
+        Log.i(TAG, "Read returning after error with " + trd_list.size() + "results");
         return trd_array;
     }
     
