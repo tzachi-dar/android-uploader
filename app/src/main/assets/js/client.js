@@ -65,7 +65,7 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
             .tickValues(tickValues)
             .orient('left');
 
-        updateChart(true);
+        updateChart(true, false);
     }
 
     function sgv2Color(sgv) {
@@ -79,7 +79,7 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
    }
 
     // called for initial update and updates for resize
-    function updateChart(init) {
+    function updateChart(init, unitsChanged) {
 
         console.log("Updating chart...");
 
@@ -97,7 +97,7 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
         focusHeight = chartHeight;
 
         // only redraw chart if chart size has changed
-        if ((prevChartWidth != chartWidth) || (prevChartHeight != chartHeight)) {
+        if ((prevChartWidth != chartWidth) || (prevChartHeight != chartHeight) || unitsChanged) {
 
             prevChartWidth = chartWidth;
             prevChartHeight = chartHeight;
@@ -223,7 +223,7 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
     window.onresize = function () {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () {
-            updateChart(false);
+            updateChart(false, false);
         }, 100);
     };
 
@@ -280,7 +280,7 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
 
     function updateChartWithTimer() {
         console.log("Timer expired...updating chart...");
-        updateChart(false);
+        updateChart(false, false);
         updateTimer = setTimeout(updateChartWithTimer, 60000);
     }
 
@@ -292,12 +292,12 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
             });
         }
         isInitialData = false;
-        updateChart(false);
+        updateChart(false, false);
         updateTimer = setTimeout(updateChartWithTimer, 60000);
     }
 
-    function updateUnits(isMmol) {
-        // only update if units have changed
+    function updateUnits(isMmol, isLogaritmic) {
+        // only update if units have changed 
         if (isMmol && units != "mmol")  {
             console.log("changing to mmol");
             tickValues = [2.0, 3.0, 4.0, 6.0, 10.0, 15.0, 22.0];
@@ -318,8 +318,11 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
         // remove the data that was staled when timers were paused
         focus.selectAll('circle').data([], dateFn).exit().remove();
 
-        yScale = d3.scale.log()
-            .domain([scaleBg(30), scaleBg(510)]);
+        if (isLogaritmic) {
+            yScale = d3.scale.log().domain([scaleBg(30), scaleBg(510)]);
+        } else {
+            yScale = d3.scale.linear().domain([scaleBg(30), scaleBg(450)]);            
+        }
 
         yAxis = d3.svg.axis()
             .scale(yScale)
@@ -339,7 +342,7 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
             .call(yAxis);
 
         isInitialData = false;
-        updateChart(false);
+        updateChart(false, true);
     }
 
     // Initialize Charts
