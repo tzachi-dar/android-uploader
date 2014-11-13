@@ -1,7 +1,7 @@
 var latestSGV,
     errorCode,
     treatments,
-    padding = { top: 20, right: 0, bottom: 10, left: 0 },
+    padding = { top: 20, right: 40, bottom: 10, left: 0 },
     opacity = {current: 1, DAY: 1, NIGHT: 0.5},
     now = Date.now(),
     data = [],
@@ -97,7 +97,7 @@ var latestSGV,
             .scale(yScale)
             .tickFormat(d3.format('d'))
             .tickValues(tickValues)
-            .orient('left');
+            .orient('right');
 
         updateChart(true, false);
     }
@@ -473,7 +473,7 @@ var latestSGV,
             .scale(yScale)
             .tickFormat(d3.format('d'))
             .tickValues(tickValues)
-            .orient('left');
+            .orient('right');
 
         focus.select('.y.axis').remove();
 
