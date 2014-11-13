@@ -99,7 +99,7 @@ var latestSGV,
             .tickValues(tickValues)
             .orient('left');
 
-        updateChart(true);
+        updateChart(true, false);
     }
 
     // get the desired opacity for context chart based on the brush extent
@@ -123,7 +123,7 @@ var latestSGV,
    }
 
     // called for initial update and updates for resize
-    function updateChart(init) {
+    function updateChart(init, unitsChanged) {
 
         console.log("Updating chart...");
 
@@ -141,7 +141,7 @@ var latestSGV,
         focusHeight = chartHeight;
 
         // only redraw chart if chart size has changed
-        if ((prevChartWidth != chartWidth) || (prevChartHeight != chartHeight)) {
+        if ((prevChartWidth != chartWidth) || (prevChartHeight != chartHeight) || unitsChanged) {
 
             prevChartWidth = chartWidth;
             prevChartHeight = chartHeight;
@@ -268,7 +268,7 @@ var latestSGV,
     window.onresize = function () {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () {
-            updateChart(false);
+            updateChart(false, false);
         }, 100);
     };
 
@@ -435,7 +435,7 @@ var latestSGV,
 
     function updateChartWithTimer() {
         console.log("Timer expired...updating chart...");
-        updateChart(false);
+        updateChart(false, false);
         updateTimer = setTimeout(updateChartWithTimer, 60000);
     }
 
@@ -447,11 +447,11 @@ var latestSGV,
             });
         }
         isInitialData = false;
-        updateChart(false);
+        updateChart(false, false);
         updateTimer = setTimeout(updateChartWithTimer, 60000);
     }
 
-    function updateUnits(isMmol) {
+    function updateUnits(isMmol, isLogaritmic) {
         if (isMmol)  {
             console.log("changing to mmol");
             tickValues = [2.0, 3.0, 4.0, 6.0, 10.0, 15.0, 22.0];
@@ -461,9 +461,13 @@ var latestSGV,
             tickValues = [40, 60, 80, 120, 180, 300, 400];
             units = "mg/dL";
         }
-
-        yScale = d3.scale.log()
-            .domain([scaleBg(30), scaleBg(510)]);
+        if (isLogaritmic) {
+            yScale = d3.scale.log().domain([scaleBg(30), scaleBg(510)]);
+        } else {
+            yScale = d3.scale.linear().domain([scaleBg(30), scaleBg(450)]);
+            
+        }
+            
 
         yAxis = d3.svg.axis()
             .scale(yScale)
@@ -487,7 +491,7 @@ var latestSGV,
         });
         
         isInitialData = false;
-        updateChart(false);
+        updateChart(false, true);
     }
 
     // Initialize Charts
