@@ -2,6 +2,7 @@ package com.nightscout.android.settings;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -18,12 +19,20 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.RingtonePreference;
 import android.text.TextUtils;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.support.v4.app.NavUtils;
 
 
+
+
 import com.nightscout.android.R;
+import com.nightscout.android.dexcom.Constants;
 
 import java.util.List;
 
@@ -87,6 +96,13 @@ public class SettingsActivity extends PreferenceActivity {
 
         setupSimplePreferencesScreen();
     }
+    private String [] convertToMmol(String [] bg) {
+        int i;
+        String [] new_bg = new String[bg.length];
+        for (i=0; i < bg.length; i++)
+            new_bg[i] = Float.toString(18 * Float.parseFloat(bg[i]));
+        return new_bg;
+    }
 
     /**
      * Shows the simplified settings UI if the device configuration if the
@@ -135,7 +151,22 @@ public class SettingsActivity extends PreferenceActivity {
         getPreferenceScreen().addPreference(fakeHeader);
         addPreferencesFromResource(R.xml.pref_labs);
 
-
+        
+        SharedPreferences prefs = 
+                PreferenceManager.getDefaultSharedPreferences(findPreference("display_options_units").getContext());
+        boolean isMmol = prefs.getString("display_options_units", "0").equals("0") ? false : true;
+        if(isMmol ) {
+            ListPreference lp = (ListPreference)findPreference("display_low_range");
+            String [] entries = getResources().getStringArray(R.array.perf_low_range_entries_mmol);
+            lp.setEntries(entries);
+            lp.setEntryValues(convertToMmol(entries));
+            
+            lp = (ListPreference)findPreference("display_high_range");
+            entries = getResources().getStringArray(R.array.perf_high_range_entries_mmol);
+            lp.setEntries(entries);
+            lp.setEntryValues(convertToMmol(entries));
+        }
+  
         // Bind the summaries of EditText/List/Dialog/Ringtone preferences to
         // their values. When their values change, their summaries are updated
         // to reflect the new value, per the Android Design guidelines.
@@ -146,6 +177,8 @@ public class SettingsActivity extends PreferenceActivity {
         bindPreferenceSummaryToValue(findPreference("acra.user.email"));
         bindPreferenceSummaryToValue(findPreference("display_options_units"));
         bindPreferenceSummaryToValue(findPreference("display_verticle_axis"));
+        bindPreferenceSummaryToValue(findPreference("display_low_range"));
+        bindPreferenceSummaryToValue(findPreference("display_high_range"));
 
         try {
             PackageInfo pInfo = null;
