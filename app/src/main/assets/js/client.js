@@ -13,7 +13,9 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
     clip,
     FOCUS_DATA_RANGE_MS = 14400000,
     updateTimer,
-    units = "mg/dL";
+    units = "mg/dL",
+    lowRange = 80,
+    highRange = 180;
 
     // Tick Values
     var tickValues = [40, 60, 80, 120, 180, 300, 400];
@@ -69,10 +71,10 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
     }
 
     function sgv2Color(sgv) {
-	    if(sgv <= parseFloat(scaleBg(80))) {
+	    if(sgv <= parseFloat(scaleBg(lowRange))) {
 		return 'red';
 	    }
-	    if (sgv >= parseFloat(scaleBg(180))) {
+	    if (sgv >= parseFloat(scaleBg(highRange))) {
 		    return 'yellow';
 	    }
 	    return 'green';
@@ -133,9 +135,9 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
                 focus.append('line')
                     .attr('class', 'high-line')
                     .attr('x1', xScale(new Date(Date.now() - FOCUS_DATA_RANGE_MS)))
-                    .attr('y1', yScale(scaleBg(180)))
+                    .attr('y1', yScale(scaleBg(highRange)))
                     .attr('x2', xScale(new Date(Date.now())))
-                    .attr('y2', yScale(scaleBg(180)))
+                    .attr('y2', yScale(scaleBg(highRange)))
                     .style('stroke-dasharray', ('3, 3'))
                     .attr('stroke', 'yellow');
 
@@ -143,9 +145,9 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
                 focus.append('line')
                     .attr('class', 'low-line')
                     .attr('x1', xScale(new Date(Date.now() - FOCUS_DATA_RANGE_MS)))
-                    .attr('y1', yScale(scaleBg(80)))
+                    .attr('y1', yScale(scaleBg(lowRange)))
                     .attr('x2', xScale(new Date(Date.now())))
-                    .attr('y2', yScale(scaleBg(80)))
+                    .attr('y2', yScale(scaleBg(lowRange)))
                     .style('stroke-dasharray', ('3, 3'))
                     .attr('stroke', 'red');
 
@@ -167,18 +169,18 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
                     .transition()
                     .duration(UPDATE_TRANS_MS)
                     .attr('x1', xScale(new Date(Date.now() - FOCUS_DATA_RANGE_MS)))
-                    .attr('y1', yScale(scaleBg(180)))
+                    .attr('y1', yScale(scaleBg(highRange)))
                     .attr('x2', xScale(new Date(Date.now())))
-                    .attr('y2', yScale(scaleBg(180)));
+                    .attr('y2', yScale(scaleBg(highRange)));
 
                 // transition low line to correct location
                 focus.select('.low-line')
                     .transition()
                     .duration(UPDATE_TRANS_MS)
                     .attr('x1', xScale(new Date(Date.now() - FOCUS_DATA_RANGE_MS)))
-                    .attr('y1', yScale(scaleBg(80)))
+                    .attr('y1', yScale(scaleBg(lowRange)))
                     .attr('x2', xScale(new Date(Date.now())))
-                    .attr('y2', yScale(scaleBg(80)));
+                    .attr('y2', yScale(scaleBg(lowRange)));
             }
         }
 
@@ -296,7 +298,9 @@ var padding = { top: 20, right: 0, bottom: 10, left: 0 },
         updateTimer = setTimeout(updateChartWithTimer, 60000);
     }
 
-    function updateUnits(isMmol, isLogaritmic) {
+    function updateUnits(isMmol, isLogaritmic, lRange, hRange) {
+        lowRange = lRange;
+        highRange = hRange;
         // only update if units have changed 
         if (isMmol && units != "mmol")  {
             console.log("changing to mmol");
