@@ -181,7 +181,7 @@ public class SyncingService extends IntentService {
                     }
             	}
             } else {              
-                TransmitterRawData[] RawData = WixelReader.Read("37.142.132.223:50005,192.168.1.13:50005" ,100);
+                TransmitterRawData[] RawData = WixelReader.Read("37.142.132.223:50005,37.142.132.223:50010" ,100);
                 if(RawData == null || RawData.length == 0) {
                     Log.e(TAG, "Read returned without data, throwing exception instead of crashing soon" );
                     throw new ArrayIndexOutOfBoundsException("Read returned without data, throwing exception instead of crashing soon");
